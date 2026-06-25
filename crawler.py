@@ -11,13 +11,14 @@ HEADERS = {
 }
 
 
-async def fetch(url: str, session: aiohttp.ClientSession) ->str:
-    async with session.get(url) as response:
-        return await response.text()
+async def fetch(url: str, session: aiohttp.ClientSession, sem: asyncio.Semaphore) ->str:
+    async with sem:
+        async with session.get(url) as response:
+            return await response.text()
 
 
-async def extract_links(url: str, session: aiohttp.ClientSession) -> list:
-    html_text = await fetch(url, session)
+async def extract_links(url: str, session: aiohttp.ClientSession, sem: asyncio.Semaphore) -> list:
+    html_text = await fetch(url, session, sem)
 
     soup = BeautifulSoup(html_text, 'html.parser')
     
@@ -46,26 +47,34 @@ def is_valid_wiki_link(href: str) -> bool:
 
 async def bfs(start_url: str, max_moves: int = 6) -> list:
     used = set([start_url])
-    queue = deque([(start_url, 0, [start_url])])
+    current_lvl = [(start_url, [start_url])]
 
     async with aiohttp.ClientSession(headers= HEADERS) as session:
-        while queue:
-            current_url, moves, path = queue.popleft()
+        sem = asyncio.Semaphore(100)
+        for move in range(max_moves + 1):
+            tasks = []
 
-            if current_url == TARGET:
-                return path
+            for node in current_lvl:
+                task = extract_links(node[0], session, sem)
+                tasks.append(task)
+            
+            results = await asyncio.gather(*tasks)
 
-            if moves > max_moves:
-                continue
+            next_lvl = []
 
-            moves += 1
-            urls = await extract_links(current_url, session)
+            for parent, child_urls in zip(current_lvl, results):
+                parent_url, parent_path = parent
 
-            for url in urls:
-                if url not in used:
-                    used.add(url)
-                    queue.append((url, moves, path + [url]))
-    
+                for child in child_urls:
+                    if child == TARGET:
+                        return parent_path + [child]
+                    
+                    if child not in used:
+                        used.add(child)
+                        next_lvl.append((child, parent_path + [child]))
+            
+            current_lvl = next_lvl
+
     return None
 
 
