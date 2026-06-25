@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 BASE_URL = "https://en.wikipedia.org"
 TARGET = "https://en.wikipedia.org/wiki/Adolf_Hitler"
 HEADERS = {
-    "User-Agent": "HitlerWikiCrawler/1.0; hitlercrawler@gmail.com)"
+    "User-Agent": "HitlerWikiCrawler/1.0 (hitlercrawler@gmail.com)"
 }
 
 
@@ -46,12 +46,15 @@ def is_valid_wiki_link(href: str) -> bool:
 
 
 async def bfs(start_url: str, max_moves: int = 6) -> list:
+    if start_url == TARGET:
+        return [start_url]
+    
     used = set([start_url])
     current_lvl = [(start_url, [start_url])]
-
+    
     async with aiohttp.ClientSession(headers= HEADERS) as session:
         sem = asyncio.Semaphore(100)
-        for move in range(max_moves + 1):
+        for move in range(max_moves):
             tasks = []
 
             for node in current_lvl:
@@ -88,7 +91,7 @@ async def main():
         print(" ->\n".join(path))
 
     else:
-        print("Path does not exist within 6 moves")
+        print("Hitler not found")
 
 
 if __name__ == "__main__":
