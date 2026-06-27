@@ -31,4 +31,5 @@ Instead of a basic BFS, the program implements a network-optimized, parallelized
 - **Connection Pooling:** A single `aiohttp.ClientSession` is established at startup and passed down to the functions.
 - **Cycle Prevention:** To avoid cycles in our tree of Wikipedia articles the program uses classic `set(Hash Set)` data structure. It stores the links on used articles and checks for O(1) if new link was previously added to the set.
 - **Path Tracking:** The path history is preserved across parallel executions by `zip`-ping the parent node states with the awaited child results, ensuring accurate hop-by-hop tracking without race conditions.
+
 *The time spent on the whole project is apr. 3 hours*
